@@ -1,0 +1,1371 @@
+/* ==========================================================================
+   NOCTIS — A Scrollytelling Experience
+   Tech: Vanilla HTML5 / CSS3 / Vanilla JavaScript
+   Mood: Total blackout, quiet luxury, 1px hairlines, pure flat contrast
+   ========================================================================== */
+
+/* DESIGN TOKENS */
+:root {
+  --asphalt: #07080A;
+  --graphite: #121418;
+  --fog: #8A8F98;
+  --bone: #EDEAE4;
+  --xenon: #CFE3FF;
+  --taillight: #E1251B;
+  --hairline: rgba(237, 234, 228, 0.12);
+
+  --font-display: 'Archivo', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-hud: 'JetBrains Mono', monospace;
+
+  --ease-noctis: cubic-bezier(0.16, 1, 0.3, 1);
+  --trans-normal: 0.7s var(--ease-noctis);
+  --trans-fast: 0.3s var(--ease-noctis);
+}
+
+/* BASE RESET */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background-color: var(--asphalt);
+  color: var(--bone);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  scroll-behavior: smooth;
+  /* Never put overflow: hidden on html/body (breaks sticky). Use clip */
+  overflow-x: clip;
+}
+
+body {
+  background-color: var(--asphalt);
+  color: var(--bone);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: clip;
+}
+
+/* Prevent interaction during initial load */
+body.is-loading {
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* TYPOGRAPHY */
+.display-title {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+  color: var(--bone);
+}
+
+.mono-label {
+  font-family: var(--font-hud);
+  font-weight: 400;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fog);
+}
+
+.section-tag {
+  color: var(--xenon);
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+
+/* FIXED FILM GRAIN OVERLAY */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.038;
+}
+
+/* CUSTOM CURSOR ("The Headlight", Desktop Only) */
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+@media (pointer: fine) {
+  body:not(.prefers-reduced) {
+    cursor: none;
+  }
+  
+  body:not(.prefers-reduced) a,
+  body:not(.prefers-reduced) button,
+  body:not(.prefers-reduced) input,
+  body:not(.prefers-reduced) select {
+    cursor: none;
+  }
+
+  .cursor {
+    opacity: 1;
+  }
+}
+
+.cursor-ring {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--xenon);
+  border-radius: 50%;
+  position: absolute;
+  transition: width 0.2s var(--ease-noctis), height 0.2s var(--ease-noctis), opacity 0.2s ease, border-radius 0.2s ease;
+}
+
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--xenon);
+  border-radius: 50%;
+  position: absolute;
+  transition: opacity 0.2s ease;
+}
+
+.cursor-bar {
+  width: 0;
+  height: 2px;
+  background-color: var(--xenon);
+  position: absolute;
+  opacity: 0;
+  transition: width 0.25s var(--ease-noctis), opacity 0.2s ease, background-color 0.12s ease;
+}
+
+.cursor-label {
+  position: absolute;
+  left: 28px;
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--xenon);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Hover morph state */
+.cursor.is-hover .cursor-ring {
+  opacity: 0;
+  width: 44px;
+}
+
+.cursor.is-hover .cursor-dot {
+  opacity: 0;
+}
+
+.cursor.is-hover .cursor-bar {
+  opacity: 1;
+  width: 44px;
+}
+
+.cursor.is-hover .cursor-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Click flash: brighter for 120ms */
+.cursor.is-active .cursor-bar {
+  background-color: #FFFFFF;
+}
+
+/* PRELOADER SCREEN */
+.preloader {
+  position: fixed;
+  inset: 0;
+  background-color: var(--asphalt);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.8s var(--ease-noctis);
+}
+
+.preloader.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preloader-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 2rem;
+}
+
+.preloader-wordmark {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 300;
+  font-size: clamp(32px, 5vw, 64px);
+  letter-spacing: 0.08em;
+  color: var(--bone);
+  margin-bottom: 2.5rem;
+}
+
+.preloader-track {
+  width: 240px;
+  height: 1px;
+  background-color: var(--hairline);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.preloader-bar {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: 0%;
+  transform: translateX(-50%);
+  background-color: var(--xenon);
+  transition: width 0.15s ease-out, background-color 0.2s ease;
+}
+
+.preloader-bar.is-finishing {
+  background-color: #FFFFFF;
+}
+
+.preloader-counter {
+  font-size: 12px;
+  color: var(--fog);
+}
+
+/* MAIN NAVIGATION */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 500;
+  mix-blend-mode: difference;
+  padding: 2.5rem 3.5rem;
+  transition: transform 0.5s var(--ease-noctis);
+}
+
+.nav.is-hidden {
+  transform: translateY(-100%);
+}
+
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-brand {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  color: var(--bone);
+}
+
+.nav-menu {
+  display: flex;
+  gap: 3rem;
+}
+
+.nav-link {
+  font-size: 11px;
+  color: var(--bone);
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+.nav-link:hover,
+.nav-link:focus-visible {
+  color: var(--xenon);
+}
+
+/* FOCUS VISIBLE ACCESSIBILITY USING XENON LIGHT BAR */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--xenon);
+}
+
+/* ==========================================================================
+   PINNED SCROLLYTELLING ARCHITECTURE (HERO & DISMANTLE)
+   ========================================================================== */
+.hero-wrapper,
+.dismantle-wrapper {
+  position: relative;
+  width: 100%;
+  background-color: var(--asphalt);
+}
+
+.sticky-stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.scrolly-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 1PX XENON BOTTOM PROGRESS LINE */
+.stage-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background-color: var(--hairline);
+  z-index: 30;
+}
+
+.stage-progress-fill {
+  height: 100%;
+  width: 0%;
+  background-color: var(--xenon);
+  transition: width 0.05s linear;
+}
+
+/* ==========================================================================
+   SECTION 1: HERO
+   ========================================================================== */
+.hero-hud {
+  position: absolute;
+  left: 3.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  z-index: 20;
+}
+
+.hud-item {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--fog);
+}
+
+.hud-tick {
+  width: 2px;
+  height: 10px;
+  background-color: var(--taillight);
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.hud-label {
+  margin-right: 6px;
+  color: var(--fog);
+}
+
+.hud-value {
+  color: var(--bone);
+  min-width: 28px;
+}
+
+.hud-unit {
+  margin-left: 4px;
+  color: var(--fog);
+}
+
+/* Hero Chapters in Empty Sky (never over the car) */
+.hero-chapter {
+  position: absolute;
+  top: 15%;
+  left: 10%;
+  right: 10%;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-noctis);
+}
+
+.hero-chapter.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chapter-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.line-mask {
+  overflow: hidden;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.reveal-line {
+  display: block;
+  transform: translateY(105%);
+  transition: transform 0.9s var(--ease-noctis), opacity 0.9s var(--ease-noctis);
+  opacity: 0;
+}
+
+.hero-chapter.is-active .reveal-line {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Chapter 1 specifics */
+.hero-main-title {
+  font-size: clamp(48px, 9vw, 130px);
+}
+
+.hero-city-line {
+  font-family: var(--font-body);
+  font-size: clamp(16px, 1.4vw, 22px);
+  color: var(--fog);
+  margin-top: 0.5rem;
+}
+
+.hero-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 3.5rem;
+}
+
+.pulse-line {
+  width: 32px;
+  height: 1px;
+  background-color: var(--xenon);
+  animation: pulseLine 2s infinite ease-in-out;
+}
+
+@keyframes pulseLine {
+  0%, 100% { transform: scaleX(0.4); opacity: 0.4; }
+  50% { transform: scaleX(1); opacity: 1; }
+}
+
+.hint-text {
+  font-size: 11px;
+  color: var(--fog);
+}
+
+/* Chapter 2 & 3 statements */
+.hero-statement-title {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 300;
+  font-size: clamp(36px, 6vw, 84px);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  max-width: 22ch;
+  line-height: 1.05;
+}
+
+/* Chapter 4 GT-E specifics */
+.hero-model-name {
+  font-size: clamp(52px, 8vw, 120px);
+}
+
+.hero-model-specs {
+  font-size: 12px;
+  color: var(--xenon);
+  margin-top: 1rem;
+  letter-spacing: 0.14em;
+}
+
+.hero-model-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--bone);
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 4px;
+  transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+.hero-model-link:hover {
+  color: var(--xenon);
+  border-color: var(--xenon);
+}
+
+.arrow-glyph {
+  font-family: sans-serif;
+  transition: transform 0.3s var(--ease-noctis);
+}
+
+.hero-model-link:hover .arrow-glyph {
+  transform: translateX(4px);
+}
+
+/* ==========================================================================
+   SECTION 2: STATEMENT (100vh, Unpinned)
+   ========================================================================== */
+.statement-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 3.5rem;
+  background-color: var(--asphalt);
+  position: relative;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.statement-container {
+  max-width: 1100px;
+  width: 100%;
+  text-align: center;
+}
+
+.statement-quote {
+  font-size: clamp(36px, 5.5vw, 76px);
+  line-height: 1.15;
+  color: var(--bone);
+}
+
+/* Word-by-word reveal: each word spans from 15% to 100% opacity */
+.statement-word {
+  display: inline-block;
+  opacity: 0.15;
+  transition: opacity 0.1s linear;
+}
+
+/* ==========================================================================
+   SECTION 3: DISMANTLE (350vh, Pinned)
+   ========================================================================== */
+.dismantle-header {
+  position: absolute;
+  top: 3.5rem;
+  left: 3.5rem;
+  z-index: 20;
+}
+
+.dismantle-title {
+  font-size: clamp(28px, 4vw, 56px);
+}
+
+.callouts-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.callout-node {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s var(--ease-noctis), transform 0.6s var(--ease-noctis);
+}
+
+.callout-node.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.callout-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--xenon);
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.callout-line {
+  position: absolute;
+  height: 1px;
+  background-color: var(--xenon);
+  top: 0;
+}
+
+.callout-content {
+  position: absolute;
+  top: -12px;
+  white-space: nowrap;
+}
+
+.callout-tag {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--xenon);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.callout-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--bone);
+}
+
+/* Alignment variants */
+.callout-node.align-right .callout-line {
+  left: 0;
+  width: 60px;
+}
+
+.callout-node.align-right .callout-content {
+  left: 68px;
+}
+
+.callout-node.align-left .callout-line {
+  right: 0;
+  width: 60px;
+}
+
+.callout-node.align-left .callout-content {
+  right: 68px;
+  text-align: right;
+}
+
+/* ==========================================================================
+   SECTION 4: LINEUP (Hover Accordion, 100vh)
+   ========================================================================== */
+.lineup-section {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: var(--asphalt);
+  padding: 3.5rem 0 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.lineup-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  flex-grow: 1;
+}
+
+.lineup-header {
+  padding: 0 3.5rem 2.5rem 3.5rem;
+}
+
+.lineup-heading {
+  font-size: clamp(32px, 5vw, 68px);
+}
+
+.lineup-accordion {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: calc(100vh - 180px);
+  min-height: 520px;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* ACCORDION SLIDE */
+.lineup-slide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--hairline);
+  background-color: var(--asphalt);
+  overflow: hidden;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  
+  /* Flex grow animation */
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0%;
+  transition: flex-grow 0.7s var(--ease-noctis), background-color 0.4s ease;
+}
+
+.lineup-slide:last-child {
+  border-right: none;
+}
+
+/* CLOSED STATE (defaults) */
+.slide-closed-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem 1.5rem;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.slide-number {
+  font-size: 13px;
+  color: var(--fog);
+}
+
+.slide-vertical-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--bone);
+  margin-top: auto;
+}
+
+/* CLOSED CROPPED IMAGE (25% brightness & grayscale) */
+.slide-bg-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.slide-car-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 80% center;
+  filter: grayscale(100%) brightness(25%);
+  transition: filter 0.7s var(--ease-noctis), transform 0.7s var(--ease-noctis), opacity 0.5s ease;
+}
+
+/* OPEN STATE CONTAINER */
+.slide-open-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* Floor line at 72% height */
+.slide-floor-line {
+  position: absolute;
+  top: 72%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background-color: var(--hairline);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* OPEN ACTIVE SLIDE SPECIFICS */
+.lineup-slide.is-open {
+  flex-grow: 4.8;
+  background-color: var(--graphite);
+}
+
+.lineup-slide.is-open .slide-closed-view {
+  opacity: 0;
+}
+
+.lineup-slide.is-open .slide-open-view {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lineup-slide.is-open .slide-floor-line {
+  opacity: 1;
+}
+
+.lineup-slide.is-open .slide-car-image {
+  object-fit: contain;
+  object-position: center 72%;
+  filter: grayscale(0%) brightness(100%);
+  transform: translateX(0);
+}
+
+/* Car sliding in 6% from left */
+.lineup-slide:not(.is-open) .slide-car-image {
+  transform: translateX(-6%);
+}
+
+/* Open slide typography & details */
+.slide-open-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-model-title {
+  font-size: clamp(40px, 6vw, 84px);
+  line-height: 0.95;
+}
+
+.slide-open-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  z-index: 10;
+}
+
+.slide-tagline {
+  font-family: var(--font-body);
+  font-size: clamp(14px, 1.2vw, 16px);
+  color: var(--bone);
+  max-width: 44ch;
+}
+
+.slide-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.spec-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spec-label {
+  font-size: 10px;
+  color: var(--fog);
+}
+
+.spec-value {
+  font-size: 13px;
+  color: var(--bone);
+  font-weight: 500;
+}
+
+.slide-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.swatch-row {
+  display: flex;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.color-swatch.is-active {
+  outline: 1px solid var(--bone);
+  outline-offset: 2px;
+}
+
+.slide-configure-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--xenon);
+  transition: color 0.3s ease;
+}
+
+.slide-configure-link:hover {
+  color: #FFFFFF;
+}
+
+/* Staggered entrance animation when section enters viewport */
+.lineup-slide {
+  transform: translateY(40px);
+  opacity: 0;
+  transition: transform 0.8s var(--ease-noctis), opacity 0.8s var(--ease-noctis), flex-grow 0.7s var(--ease-noctis);
+}
+
+.lineup-section.is-revealed .lineup-slide {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.lineup-section.is-revealed .lineup-slide:nth-child(1) { transition-delay: 0.00s; }
+.lineup-section.is-revealed .lineup-slide:nth-child(2) { transition-delay: 0.08s; }
+.lineup-section.is-revealed .lineup-slide:nth-child(3) { transition-delay: 0.16s; }
+.lineup-section.is-revealed .lineup-slide:nth-child(4) { transition-delay: 0.24s; }
+.lineup-section.is-revealed .lineup-slide:nth-child(5) { transition-delay: 0.32s; }
+
+/* ==========================================================================
+   SECTION 5: RESERVE (100vh)
+   ========================================================================== */
+.reserve-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-color: var(--asphalt);
+  padding: 6rem 2rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.reserve-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 760px;
+}
+
+.reserve-title {
+  font-size: clamp(48px, 8vw, 110px);
+  margin-bottom: 1.5rem;
+}
+
+.reserve-body {
+  font-size: clamp(15px, 1.2vw, 18px);
+  color: var(--fog);
+  margin-bottom: 3.5rem;
+  max-width: 48ch;
+}
+
+.reserve-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 1.2rem 2.8rem;
+  border: 1px solid var(--xenon);
+  background-color: transparent;
+  color: var(--xenon);
+  position: relative;
+  transition: background-color 0.25s var(--ease-noctis), color 0.25s var(--ease-noctis);
+}
+
+.reserve-tick {
+  width: 2px;
+  height: 14px;
+  background-color: var(--taillight);
+  display: none;
+}
+
+.reserve-button:hover {
+  background-color: var(--xenon);
+  color: var(--asphalt);
+}
+
+.reserve-button:hover .reserve-tick {
+  display: inline-block;
+}
+
+.reserve-button:hover .reserve-label {
+  color: var(--asphalt);
+}
+
+.reserve-label {
+  color: var(--xenon);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  transition: color 0.25s var(--ease-noctis);
+}
+
+/* ==========================================================================
+   RESERVATION DIALOG (ALLOCATION MODAL)
+   ========================================================================== */
+.reserve-dialog {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: auto;
+  max-width: 520px;
+  width: 90%;
+  color: var(--bone);
+  z-index: 10001;
+}
+
+.reserve-dialog::backdrop {
+  background-color: rgba(7, 8, 10, 0.85);
+}
+
+.dialog-card {
+  background-color: var(--graphite);
+  border: 1px solid var(--hairline);
+  padding: 2.5rem;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.dialog-close {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--fog);
+  transition: color 0.2s ease;
+}
+
+.dialog-close:hover {
+  color: var(--bone);
+}
+
+.dialog-title {
+  font-size: clamp(24px, 3.5vw, 36px);
+  margin-bottom: 0.75rem;
+}
+
+.dialog-desc {
+  font-size: 14px;
+  color: var(--fog);
+  margin-bottom: 2rem;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 10px;
+  color: var(--fog);
+}
+
+.form-select,
+.form-input {
+  background-color: var(--asphalt);
+  border: 1px solid var(--hairline);
+  color: var(--bone);
+  padding: 0.9rem 1rem;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.form-select:focus,
+.form-input:focus {
+  border-color: var(--xenon);
+}
+
+.dialog-submit-btn {
+  width: 100%;
+  padding: 1.1rem;
+  background-color: var(--xenon);
+  color: var(--asphalt);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.dialog-submit-btn:hover {
+  background-color: #FFFFFF;
+}
+
+.form-feedback {
+  font-size: 11px;
+  color: var(--xenon);
+  text-align: center;
+  min-height: 18px;
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+.footer {
+  border-top: 1px solid var(--hairline);
+  background-color: var(--asphalt);
+  padding: 5rem 3.5rem 3rem 3.5rem;
+}
+
+.footer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 3rem;
+}
+
+.footer-brand {
+  font-size: 32px;
+  letter-spacing: 0.08em;
+}
+
+.footer-columns {
+  display: flex;
+  gap: 5rem;
+  flex-wrap: wrap;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.footer-heading {
+  font-size: 11px;
+  color: var(--xenon);
+}
+
+.footer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer-list a {
+  font-size: 11px;
+  color: var(--fog);
+  transition: color 0.2s ease;
+}
+
+.footer-list a:hover {
+  color: var(--bone);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2rem;
+  border-top: 1px solid var(--hairline);
+  font-size: 10px;
+  color: var(--fog);
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN & MOBILE BEHAVIORS
+   ========================================================================== */
+@media (max-width: 768px) {
+  .nav {
+    padding: 1.5rem 1.5rem;
+  }
+
+  .nav-menu {
+    gap: 1.5rem;
+  }
+
+  .hero-hud {
+    left: 1.5rem;
+    top: auto;
+    bottom: 2rem;
+    transform: none;
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+
+  .hero-chapter {
+    top: 12%;
+    left: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .statement-section {
+    padding: 4rem 1.5rem;
+  }
+
+  .dismantle-header {
+    top: 2rem;
+    left: 1.5rem;
+  }
+
+  .lineup-section {
+    padding: 2.5rem 0 0 0;
+    min-height: auto;
+    height: auto;
+  }
+
+  .lineup-header {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+  }
+
+  /* MOBILE LINEUP ACCORDION (Vertical 72px rows) */
+  .lineup-accordion {
+    flex-direction: column;
+    height: auto;
+    min-height: auto;
+  }
+
+  .lineup-slide {
+    width: 100%;
+    min-height: 72px;
+    height: 72px;
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+    flex-grow: 0;
+    flex-basis: auto;
+    transition: height 0.6s var(--ease-noctis);
+  }
+
+  .slide-closed-view {
+    flex-direction: row;
+    align-items: center;
+    padding: 0 1.5rem;
+  }
+
+  .slide-vertical-name {
+    writing-mode: horizontal-tb;
+    transform: none;
+    margin-top: 0;
+  }
+
+  .lineup-slide.is-open {
+    height: 580px;
+    flex-grow: 0;
+  }
+
+  .slide-open-view {
+    padding: 1.5rem;
+  }
+
+  .slide-floor-line {
+    top: 60%;
+  }
+
+  .lineup-slide.is-open .slide-car-image {
+    object-position: center 55%;
+  }
+
+  .slide-specs-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+
+  .footer {
+    padding: 3.5rem 1.5rem 2rem 1.5rem;
+  }
+
+  .footer-columns {
+    gap: 2.5rem;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY: PREFERS-REDUCED-MOTION
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* No pinning */
+  .hero-wrapper,
+  .dismantle-wrapper {
+    height: auto !important;
+  }
+
+  .sticky-stage {
+    position: relative !important;
+    height: 100vh !important;
+  }
+
+  /* Disable transitions & smooth scrubbing */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pulse-line {
+    animation: none;
+  }
+
+  .cursor {
+    display: none !important;
+  }
+
+  body {
+    cursor: auto !important;
+  }
+
+  .reveal-line {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .hero-chapter {
+    opacity: 1 !important;
+  }
+
+  .statement-word {
+    opacity: 1 !important;
+  }
+}
+
