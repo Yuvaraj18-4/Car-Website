@@ -8,7 +8,7 @@ window.NOCTIS_CONFIG = {
   lerpFactor: 0.15,
   cursorLerp: 0.18,
   mobileBreakpoint: 768,
-  initialPreloadCount: 40,
+  initialPreloadCount: 12,
 
   // Section 1: Hero scrollytelling sequence
   hero: {
