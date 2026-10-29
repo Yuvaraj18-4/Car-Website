@@ -67,3 +67,4 @@ All section heights, chapter scroll ranges, frame paths, callout coordinates, an
 ## License
 
 Fictional automotive concept for creative showcase purposes. © 2026 NOCTIS.
+
